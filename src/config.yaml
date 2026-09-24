@@ -1,0 +1,18 @@
+data:
+  dataset_path: data/raw/reviews.csv
+  text_column: review
+  label_column: sentiment
+  test_size: 0.2
+  random_state: 45
+
+model:
+  artifact_path: data/models/trained/sentiment_model.joblib
+  max_features: 5000
+  ngram_range:
+    - 1
+    - 2
+  analyzer: word
+  max_iter: 1000
+
+evaluation:
+  metrics_path: eval_metrics.json

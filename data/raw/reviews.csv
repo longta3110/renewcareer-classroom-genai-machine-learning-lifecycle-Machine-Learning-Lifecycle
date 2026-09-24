@@ -1,0 +1,17 @@
+review,sentiment
+"This movie was amazing with wonderful acting",positive
+"I loved the story and the characters",positive
+"A fantastic film that made me smile",positive
+"The plot was exciting and beautifully made",positive
+"Brilliant performance and excellent direction",positive
+"I hated this movie and felt bored",negative
+"The acting was terrible and the script was weak",negative
+"A disappointing film with a dull story",negative
+"The movie was bad and painfully slow",negative
+"I would not recommend this awful film",negative
+"Great visuals and a touching ending",positive
+"Poor pacing and very forgettable scenes",negative
+"An enjoyable and heartfelt experience",positive
+"The dialogue was clumsy and annoying",negative
+"Excellent music and strong emotional moments",positive
+"Predictable, boring, and badly edited",negative
