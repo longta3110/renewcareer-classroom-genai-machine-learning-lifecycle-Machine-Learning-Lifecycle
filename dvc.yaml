@@ -1,29 +1,43 @@
 stages:
   prepare:
-    cmd: python -m src.data_loader
+    cmd: python -m src.transfer_data
     deps:
-      - src/data_loader.py
-      - data/raw/reviews.csv
+      - data/raw/imdb
+      - src/transfer_data.py
+      - src/utils.py
+    params:
+      - data
     outs:
-      - data/processed/train.csv
-      - data/processed/test.csv
-
+      - data/processed/imdb
+      - reports/data_summary.json
   train:
-    cmd: python -m src.model
+    cmd: python -m src.transfer_model
     deps:
-      - src/model.py
-      - src/data_loader.py
-      - data/processed/train.csv
+      - data/processed/imdb/train.csv
+      - data/processed/imdb/validation.csv
+      - src/transfer_model.py
+      - src/utils.py
+      - requirements-ml.txt
+    params:
+      - train
+      - tracking
+      - data
     outs:
-      - data/models/trained/sentiment_model.joblib
-
-  evaluate:
-    cmd: python -m src.evaluate
-    deps:
-      - src/evaluate.py
-      - src/inference.py
-      - data/models/trained/sentiment_model.joblib
-      - data/processed/test.csv
+      - models/transformer
     metrics:
-      - eval_metrics.json:
+      - reports/train_metrics.json:
+          cache: false
+  evaluate:
+    cmd: python -m src.transfer_evaluate
+    deps:
+      - models/transformer
+      - data/processed/imdb/test.csv
+      - src/transfer_evaluate.py
+      - src/transfer_model.py
+      - src/utils.py
+    outs:
+      - reports/errors.csv
+      - reports/confusion_matrix.png
+    metrics:
+      - reports/test_metrics.json:
           cache: false

@@ -1,0 +1,124 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python -m src.transfer_data
+    deps:
+    - path: data/raw/imdb
+      hash: md5
+      md5: cada3926d5a19ef5627d94737067c645.dir
+      size: 65912316
+      nfiles: 2
+    - path: src/transfer_data.py
+      hash: md5
+      md5: 8587ea5333e234fed311d96ff30f35c7
+      size: 2340
+    - path: src/utils.py
+      hash: md5
+      md5: cf045045c37319e130b8f3519733f9e4
+      size: 1368
+    params:
+      params.yaml:
+        data:
+          source: stanfordnlp/imdb
+          seed: 42
+          validation_size: 0.2
+          train_limit: 2000
+          test_limit: 1000
+    outs:
+    - path: data/processed/imdb
+      hash: md5
+      md5: e14e19734fbba819efaec12e22c956f7.dir
+      size: 3857869
+      nfiles: 3
+    - path: reports/data_summary.json
+      hash: md5
+      md5: d977ce9cbc624a691c4d949354b439da
+      size: 294
+  train:
+    cmd: python -m src.transfer_model
+    deps:
+    - path: data/processed/imdb/train.csv
+      hash: md5
+      md5: d850125e3a3d9325a81acf935fc95d54
+      size: 2051502
+    - path: data/processed/imdb/validation.csv
+      hash: md5
+      md5: 7d546e96aaf719057b4f8883bba41e41
+      size: 493233
+    - path: requirements-ml.txt
+      hash: md5
+      md5: 32967db346a2d1c9380fb639c23c47da
+      size: 161
+    - path: src/transfer_model.py
+      hash: md5
+      md5: 15382c236e58489d327b655b262663f5
+      size: 4908
+    - path: src/utils.py
+      hash: md5
+      md5: cf045045c37319e130b8f3519733f9e4
+      size: 1368
+    params:
+      params.yaml:
+        data:
+          source: stanfordnlp/imdb
+          seed: 42
+          validation_size: 0.2
+          train_limit: 2000
+          test_limit: 1000
+        tracking:
+          experiment: imdb-transfer-learning
+        train:
+          model_name: distilbert/distilbert-base-uncased
+          max_length: 128
+          batch_size: 8
+          epochs: 2
+          learning_rate: 5e-05
+          freeze_encoder: true
+          seed: 42
+    outs:
+    - path: models/transformer
+      hash: md5
+      md5: 896d520bd331fd3ff59d17fb06433511.dir
+      size: 268778727
+      nfiles: 7
+    - path: reports/train_metrics.json
+      hash: md5
+      md5: b703d9903fc4aa6f11779d364ec4010a
+      size: 48
+  evaluate:
+    cmd: python -m src.transfer_evaluate
+    deps:
+    - path: data/processed/imdb/test.csv
+      hash: md5
+      md5: 5451be54772a79103c54a44b0bb92bc5
+      size: 1313134
+    - path: models/transformer
+      hash: md5
+      md5: 896d520bd331fd3ff59d17fb06433511.dir
+      size: 268778727
+      nfiles: 7
+    - path: src/transfer_evaluate.py
+      hash: md5
+      md5: 59be195baa29cd4a763486c74bda3ead
+      size: 1947
+    - path: src/transfer_model.py
+      hash: md5
+      md5: 15382c236e58489d327b655b262663f5
+      size: 4908
+    - path: src/utils.py
+      hash: md5
+      md5: cf045045c37319e130b8f3519733f9e4
+      size: 1368
+    outs:
+    - path: reports/confusion_matrix.png
+      hash: md5
+      md5: b3a64f921ebd535b088e0556145a9f5a
+      size: 19322
+    - path: reports/errors.csv
+      hash: md5
+      md5: f66309cfc0a3df42f144096f77060708
+      size: 414920
+    - path: reports/test_metrics.json
+      hash: md5
+      md5: 6a01c59b060be3be814a09a6ea9c317a
+      size: 122

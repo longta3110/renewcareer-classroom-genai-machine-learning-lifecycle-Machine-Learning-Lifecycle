@@ -2,6 +2,9 @@
 
 ## 📋 Assignment Overview
 
+Implementation and local run instructions: [Solution Review](SOLUTION_REVIEW.md).
+The review distinguishes implemented features, verified results, and external deployment setup.
+
 This comprehensive project guides you through the complete ML lifecycle using industry-standard MLOps tools. You'll build, version, track, and deploy a sentiment analysis model using transfer learning from HuggingFace, with automated CI/CD pipelines and production-ready deployment.
 
 ### Learning Objectives

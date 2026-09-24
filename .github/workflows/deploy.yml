@@ -1,0 +1,50 @@
+name: Deploy Reviewed Model
+on:
+  workflow_dispatch:
+    inputs:
+      training_run_id:
+        description: Successful Transformer Training workflow run ID
+        required: true
+      image:
+        description: Google Artifact Registry image URI (without tag)
+        required: true
+      service:
+        description: Cloud Run service name
+        required: true
+      region:
+        description: Google Cloud region
+        default: us-central1
+        required: true
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: transformer-results
+          path: .
+          run-id: ${{ inputs.training_run_id }}
+          github-token: ${{ github.token }}
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build and deploy
+        env:
+          IMAGE: ${{ inputs.image }}
+          SERVICE: ${{ inputs.service }}
+          REGION: ${{ inputs.region }}
+        run: |
+          gcloud auth configure-docker "${IMAGE%%/*}" --quiet
+          docker build -f app/Dockerfile -t "$IMAGE:$GITHUB_SHA" .
+          docker push "$IMAGE:$GITHUB_SHA"
+          gcloud run deploy "$SERVICE" --image "$IMAGE:$GITHUB_SHA" --region "$REGION" --port 5000 --memory 2Gi --cpu 2 --no-allow-unauthenticated --quiet
+          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')
+          curl --fail --retry 5 --retry-delay 10 -H "Authorization: Bearer $(gcloud auth print-identity-token)" "$URL/health"

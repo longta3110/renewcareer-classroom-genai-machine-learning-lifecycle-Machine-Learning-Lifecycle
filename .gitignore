@@ -8,3 +8,10 @@ data/processed/
 data/models/trained/
 metrics.json
 eval_metrics.json
+models/
+reports/*
+!reports/train_metrics.json
+!reports/test_metrics.json
+mlflow.db*
+data/raw/imdb/
+.cache/

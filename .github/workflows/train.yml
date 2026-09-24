@@ -1,0 +1,30 @@
+name: Transformer Training
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/transfer_*.py'
+      - 'params.yaml'
+      - 'dvc.yaml'
+      - 'requirements-ml.txt'
+  workflow_dispatch:
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements-ml.txt
+      - run: python -m src.download_data
+      - run: dvc repro --force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: transformer-results
+          path: |
+            models/transformer
+            reports
+            dvc.lock
+          retention-days: 14

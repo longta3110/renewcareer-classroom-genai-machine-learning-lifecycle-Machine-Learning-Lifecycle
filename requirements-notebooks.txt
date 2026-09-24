@@ -1,0 +1,4 @@
+-r requirements-ml.txt
+ipykernel>=6,<8
+nbclient>=0.10,<1
+nbformat>=5,<6

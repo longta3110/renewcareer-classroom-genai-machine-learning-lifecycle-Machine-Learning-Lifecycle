@@ -1,0 +1,9 @@
+-r requirements.txt
+torch>=2.6,<3
+transformers>=4.48,<5
+datasets>=3,<5
+mlflow>=2.20,<4
+dvc>=3.59,<4
+matplotlib>=3.9,<4
+waitress>=3,<4
+prometheus-client>=0.21,<1

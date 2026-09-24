@@ -1,0 +1,16 @@
+data:
+  source: stanfordnlp/imdb
+  seed: 42
+  validation_size: 0.2
+  train_limit: 2000
+  test_limit: 1000
+train:
+  model_name: distilbert/distilbert-base-uncased
+  max_length: 128
+  batch_size: 8
+  epochs: 2
+  learning_rate: 0.00005
+  freeze_encoder: true
+  seed: 42
+tracking:
+  experiment: imdb-transfer-learning

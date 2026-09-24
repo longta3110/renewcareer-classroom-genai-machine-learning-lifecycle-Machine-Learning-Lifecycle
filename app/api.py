@@ -1,62 +1,80 @@
-from __future__ import annotations
+"""Serve the trained transformer without training inside HTTP requests."""
+import os
+import time
 
-import sys
-from pathlib import Path
+from flask import Flask, Response, g, jsonify, request
+from prometheus_client import Counter, Histogram, CONTENT_TYPE_LATEST, generate_latest
 
-from flask import Flask, jsonify, request
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-from src.inference import batch_predict, predict
-from src.model import train_model
-from src.utils import load_config, resolve_project_path
-
+from src.transfer_inference import load_service, predict_texts
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
+REQUESTS = Counter("sentiment_requests_total", "API requests", ["endpoint", "status"])
+LATENCY = Histogram("sentiment_request_seconds", "API request latency", ["endpoint"])
 
 
-def ensure_model_exists() -> None:
-    """Train the lightweight model on first API use if no artifact exists."""
-    model_path = resolve_project_path(load_config()["model"]["artifact_path"])
-    if not model_path.exists():
-        train_model()
+@app.before_request
+def begin_request():
+    g.started = time.monotonic()
+
+
+@app.after_request
+def record_request(response):
+    endpoint = request.endpoint or "unknown"
+    REQUESTS.labels(endpoint, str(response.status_code)).inc()
+    LATENCY.labels(endpoint).observe(time.monotonic() - g.started)
+    return response
+
+
+@app.get("/metrics")
+def monitoring():
+    return Response(generate_latest(), content_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/health")
 def health():
-    model_path = resolve_project_path(load_config()["model"]["artifact_path"])
-    return jsonify(
-        {
-            "status": "ok",
-            "model_available": model_path.exists(),
-            "model_path": str(model_path),
-        }
-    )
+    try:
+        _, _, info = load_service()
+    except (OSError, ValueError):
+        return jsonify(status="unavailable", model_available=False), 503
+    return jsonify(status="ok", model_available=True, model_version=info["run_id"])
+
+
+def valid_text(value):
+    return isinstance(value, str) and bool(value.strip()) and len(value) <= 20000
+
+
+def infer(texts):
+    try:
+        return predict_texts(texts)
+    except (OSError, ValueError):
+        app.logger.exception("Model unavailable")
+        return None
 
 
 @app.post("/predict")
 def predict_endpoint():
-    payload = request.get_json(silent=True) or {}
-    text = payload.get("text")
-    if not isinstance(text, str) or not text.strip():
-        return jsonify({"error": "Request JSON must include a non-empty 'text' string."}), 400
-
-    ensure_model_exists()
-    return jsonify(predict(text))
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict) or not valid_text(payload.get("text")):
+        return jsonify(error="Provide a non-empty text string, at most 20000 characters."), 400
+    result = infer([payload["text"]])
+    if result is None:
+        return jsonify(error="Model unavailable; train and deploy a checkpoint first."), 503
+    return jsonify(result[0])
 
 
 @app.post("/predict-batch")
 def predict_batch_endpoint():
-    payload = request.get_json(silent=True) or {}
-    texts = payload.get("texts")
-    if not isinstance(texts, list) or not all(isinstance(item, str) and item.strip() for item in texts):
-        return jsonify({"error": "Request JSON must include 'texts' as a list of non-empty strings."}), 400
-
-    ensure_model_exists()
-    return jsonify({"predictions": batch_predict(texts)})
+    payload = request.get_json(silent=True)
+    texts = payload.get("texts") if isinstance(payload, dict) else None
+    if not isinstance(texts, list) or not 1 <= len(texts) <= 64 or not all(map(valid_text, texts)):
+        return jsonify(error="Provide 1-64 non-empty strings in texts, each at most 20000 characters."), 400
+    result = infer(texts)
+    if result is None:
+        return jsonify(error="Model unavailable; train and deploy a checkpoint first."), 503
+    return jsonify(predictions=result)
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=int(os.environ.get("PORT", "5000")))

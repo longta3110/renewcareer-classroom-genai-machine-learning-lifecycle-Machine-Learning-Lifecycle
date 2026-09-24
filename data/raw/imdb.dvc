@@ -1,0 +1,6 @@
+outs:
+- md5: cada3926d5a19ef5627d94737067c645.dir
+  size: 65912316
+  nfiles: 2
+  hash: md5
+  path: imdb
